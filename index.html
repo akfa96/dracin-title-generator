@@ -9,8 +9,9 @@
     input, textarea, button { margin: 8px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 14px; }
     button { background: #e11d48; color: #fff; border: none; cursor: pointer; transition: 0.2s; }
     button:hover { background: #be123c; transform: scale(1.03); }
-    textarea { width: 90%; height: 200px; }
-    pre { text-align: left; background: #fff; padding: 15px; border-radius: 10px; width: 90%; margin: auto; overflow-x: auto; }
+    textarea { width: 90%; height: 180px; }
+    pre { text-align: left; background: #fff; padding: 15px; border-radius: 10px; width: 90%; margin: 20px auto; overflow-x: auto; }
+    #downloadBtn { margin-top: 15px; display: none; }
   </style>
 </head>
 <body>
@@ -23,10 +24,11 @@
   <textarea id="apiKeys" placeholder="Masukkan minimal 2 API key Gemini di sini..."></textarea><br>
 
   <button onclick="generateTitles()">🚀 Generate Judul</button>
-  <button id="downloadBtn" style="display:none" onclick="downloadTXT()">💾 Download hasil (.txt)</button>
 
   <h3>Hasil:</h3>
-  <pre id="output"></pre>
+  <pre id="output">Belum ada hasil.</pre>
+
+  <button id="downloadBtn" onclick="downloadTXT()">💾 Download hasil (.txt)</button>
 
 <script>
 async function generateWithFallback(apiKeys, prompt) {
@@ -85,15 +87,19 @@ Format hasil: satu judul per baris, tanpa nomor urut atau simbol tambahan.
   }
 
   const finalText = allResults.join("\n\n");
-  output.textContent = finalText;
-  downloadBtn.style.display = "inline-block";
-
-  // simpan hasil global buat di-download
+  output.textContent = finalText || "⚠️ Tidak ada hasil (semua API gagal).";
   window.finalResult = finalText;
+
+  // tampilkan tombol download setelah proses selesai (apapun hasilnya)
+  downloadBtn.style.display = "inline-block";
 }
 
 function downloadTXT() {
-  const blob = new Blob([window.finalResult || ""], { type: "text/plain" });
+  if (!window.finalResult) {
+    alert("Belum ada hasil untuk diunduh, beb 😅");
+    return;
+  }
+  const blob = new Blob([window.finalResult], { type: "text/plain" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = "judul_dracin_bilingual.txt";
