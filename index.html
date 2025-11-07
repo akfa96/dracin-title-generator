@@ -1,106 +1,103 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Dracin Title Generator 💫</title>
-<style>
-  body { font-family: "Poppins", sans-serif; background: #fafafa; color: #333; text-align: center; padding: 40px; }
-  input, textarea, button { font-size: 16px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; width: 90%; max-width: 600px; margin: 10px auto; display: block; }
-  textarea { height: 160px; }
-  button { background: #d23f57; color: white; cursor: pointer; border: none; transition: 0.2s; }
-  button:hover { background: #b83248; }
-  .log { text-align: left; background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); max-width: 800px; margin: 20px auto; white-space: pre-wrap; }
-  .footer { font-size: 14px; color: #777; margin-top: 40px; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generator Judul Dracin Bilingual</title>
+  <style>
+    body { font-family: 'Poppins', sans-serif; background: #fafafa; color: #333; padding: 40px; text-align: center; }
+    input, textarea, button { margin: 8px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 14px; }
+    button { background: #e11d48; color: #fff; border: none; cursor: pointer; transition: 0.2s; }
+    button:hover { background: #be123c; transform: scale(1.03); }
+    textarea { width: 90%; height: 200px; }
+    pre { text-align: left; background: #fff; padding: 15px; border-radius: 10px; width: 90%; margin: auto; overflow-x: auto; }
+  </style>
 </head>
 <body>
-<h2>🌸 AI Dracin Title Generator 🌸</h2>
-<p>Masukkan API Key Gemini & beberapa keyword (satu per baris)</p>
 
-<input type="text" id="apiKey" placeholder="Masukkan API Key Gemini kamu">
-<textarea id="keywords" placeholder="Contoh:
-Hidden Love
-The Long Ballad
-Till the End of the Moon
-"></textarea>
+  <h2>🎬 Generator Judul Dracin Bilingual</h2>
+  <p>Masukkan beberapa keyword dracin (satu per baris):</p>
+  <textarea id="keywords" placeholder="Contoh:\nHidden Love\nLegend of the Female General"></textarea><br>
 
-<button onclick="generateAll()">🚀 Generate Semua Judul</button>
-<div id="status"></div>
-<div class="log" id="log"></div>
+  <p>Masukkan beberapa API Key (satu per baris):</p>
+  <textarea id="apiKeys" placeholder="Masukkan minimal 2 API key Gemini di sini..."></textarea><br>
 
-<div class="footer">
-  <p>Made with 💕 by <a href="https://github.com/" target="_blank">GitHub Pages</a></p>
-</div>
+  <button onclick="generateTitles()">🚀 Generate Judul</button>
+  <button id="downloadBtn" style="display:none" onclick="downloadTXT()">💾 Download hasil (.txt)</button>
+
+  <h3>Hasil:</h3>
+  <pre id="output"></pre>
 
 <script>
-async function generateAll() {
-  const apiKey = document.getElementById("apiKey").value.trim();
-  const keywordsText = document.getElementById("keywords").value.trim();
-  const log = document.getElementById("log");
-  const statusDiv = document.getElementById("status");
+async function generateWithFallback(apiKeys, prompt) {
+  for (const key of apiKeys) {
+    try {
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + key, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }]
+        })
+      });
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      if (text.trim()) return text;
+    } catch (err) {
+      console.warn("⚠️ API gagal:", key, err);
+    }
+  }
+  return "";
+}
 
-  if (!apiKey || !keywordsText) {
-    alert("Isi dulu API key & keyword-nya beb 😘");
+async function generateTitles() {
+  const keywords = document.getElementById("keywords").value.split("\n").map(k => k.trim()).filter(Boolean);
+  const apiKeys = document.getElementById("apiKeys").value.split("\n").map(k => k.trim()).filter(Boolean);
+  const output = document.getElementById("output");
+  const downloadBtn = document.getElementById("downloadBtn");
+
+  if (!keywords.length || !apiKeys.length) {
+    alert("Isi dulu keyword dan API key-nya ya, beb 💋");
     return;
   }
 
-  const keywords = keywordsText.split("\n").map(k => k.trim()).filter(k => k.length > 0);
-  log.textContent = "";
-  statusDiv.innerHTML = `✨ Mulai generate ${keywords.length} keyword...`;
+  output.textContent = "⏳ Sedang generate judul...";
+  downloadBtn.style.display = "none";
 
-  for (let i = 0; i < keywords.length; i++) {
-    const keyword = keywords[i];
-    statusDiv.innerHTML = `🔮 Proses (${i+1}/${keywords.length}): <b>${keyword}</b> ...`;
-    await generateTitles(apiKey, keyword, log);
+  let allResults = [];
+
+  for (const kw of keywords) {
+    const prompt = `
+Buatkan 100 variasi judul pendek dalam Bahasa Indonesia berdasarkan tema dracin berjudul "${kw}".
+Judul harus tetap mengandung kata kunci utama dalam bahasa aslinya (${kw}), 
+tapi bagian tambahan (prefix/suffix) dalam Bahasa Indonesia agar terasa natural, emosional, dan clickbait.
+Contoh: "Rahasia di Balik Hidden Love", "Hidden Love: Cinta yang Tak Terungkap".
+
+Format hasil: satu judul per baris, tanpa nomor urut atau simbol tambahan.
+    `;
+    output.textContent = `⏳ Sedang generate untuk '${kw}'...`;
+    const result = await generateWithFallback(apiKeys, prompt);
+    if (result.trim()) {
+      allResults.push(result.trim());
+      console.log(`✅ Sukses: ${kw}`);
+    } else {
+      allResults.push(`⚠️ Gagal generate untuk '${kw}'`);
+    }
   }
 
-  statusDiv.innerHTML = `✅ Semua selesai! Cek file .txt kamu di folder download 💖`;
+  const finalText = allResults.join("\n\n");
+  output.textContent = finalText;
+  downloadBtn.style.display = "inline-block";
+
+  // simpan hasil global buat di-download
+  window.finalResult = finalText;
 }
 
-async function generateTitles(apiKey, keyword, log) {
-  const prompt = `Buatkan 100 judul fiksi orisinal bergaya drama Tiongkok (bukan judul asli).
-Setiap judul wajib mengandung kata '${keyword}'.
-Gunakan gaya puitis, romantis, atau misterius.
-Judul harus singkat, maksimal 6 kata, tanpa nomor.
-Satu judul per baris.`;
-
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }]
-      })
-    });
-
-    if (!response.ok) {
-      log.textContent += `❌ HTTP Error (${response.status}) untuk '${keyword}'\n`;
-      console.error(await response.text());
-      return;
-    }
-
-    const data = await response.json();
-    const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-    if (!aiText.trim()) {
-      log.textContent += `⚠️ Gagal generate untuk '${keyword}' (kosong)\n`;
-      return;
-    }
-
-    const titles = aiText.split("\n").map(t => t.trim()).filter(t => t.length > 0);
-    const blob = new Blob([titles.join("\n")], { type: "text/plain" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `judul_dracin_${keyword.replace(/\s+/g, "_")}.txt`;
-    link.click();
-
-    log.textContent += `✅ ${keyword}: ${titles.length} judul dibuat & disimpan.\n`;
-  } catch (err) {
-    console.error("Error:", err);
-    log.textContent += `💥 Error koneksi untuk '${keyword}' (${err.message})\n`;
-  }
+function downloadTXT() {
+  const blob = new Blob([window.finalResult || ""], { type: "text/plain" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "judul_dracin_bilingual.txt";
+  link.click();
 }
 </script>
 </body>
