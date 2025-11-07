@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Dracin Title Generator 💫</title>
+<style>
+  body { font-family: "Poppins", sans-serif; background: #fafafa; color: #333; text-align: center; padding: 40px; }
+  input, textarea, button { font-size: 16px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; width: 90%; max-width: 600px; margin: 10px auto; display: block; }
+  textarea { height: 160px; }
+  button { background: #d23f57; color: white; cursor: pointer; border: none; transition: 0.2s; }
+  button:hover { background: #b83248; }
+  .log { text-align: left; background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); max-width: 800px; margin: 20px auto; white-space: pre-wrap; }
+  .footer { font-size: 14px; color: #777; margin-top: 40px; }
+</style>
+</head>
+<body>
+<h2>🌸 AI Dracin Title Generator 🌸</h2>
+<p>Masukkan API Key Gemini & beberapa keyword (satu per baris)</p>
+
+<input type="text" id="apiKey" placeholder="Masukkan API Key Gemini kamu">
+<textarea id="keywords" placeholder="Contoh:
+Hidden Love
+The Long Ballad
+Till the End of the Moon
+"></textarea>
+
+<button onclick="generateAll()">🚀 Generate Semua Judul</button>
+<div id="status"></div>
+<div class="log" id="log"></div>
+
+<div class="footer">
+  <p>Made with 💕 by <a href="https://github.com/" target="_blank">GitHub Pages</a></p>
+</div>
+
+<script>
+async function generateAll() {
+  const apiKey = document.getElementById("apiKey").value.trim();
+  const keywordsText = document.getElementById("keywords").value.trim();
+  const log = document.getElementById("log");
+  const statusDiv = document.getElementById("status");
+
+  if (!apiKey || !keywordsText) {
+    alert("Isi dulu API key & keyword-nya beb 😘");
+    return;
+  }
+
+  const keywords = keywordsText.split("\n").map(k => k.trim()).filter(k => k.length > 0);
+  log.textContent = "";
+  statusDiv.innerHTML = `✨ Mulai generate ${keywords.length} keyword...`;
+
+  for (let i = 0; i < keywords.length; i++) {
+    const keyword = keywords[i];
+    statusDiv.innerHTML = `🔮 Proses (${i+1}/${keywords.length}): <b>${keyword}</b> ...`;
+    await generateTitles(apiKey, keyword, log);
+  }
+
+  statusDiv.innerHTML = `✅ Semua selesai! Cek file .txt kamu di folder download 💖`;
+}
+
+async function generateTitles(apiKey, keyword, log) {
+  const prompt = `Buatkan 100 judul fiksi orisinal bergaya drama Tiongkok (bukan judul asli).
+Setiap judul wajib mengandung kata '${keyword}'.
+Gunakan gaya puitis, romantis, atau misterius.
+Judul harus singkat, maksimal 6 kata, tanpa nomor.
+Satu judul per baris.`;
+
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }]
+      })
+    });
+
+    if (!response.ok) {
+      log.textContent += `❌ HTTP Error (${response.status}) untuk '${keyword}'\n`;
+      console.error(await response.text());
+      return;
+    }
+
+    const data = await response.json();
+    const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+    if (!aiText.trim()) {
+      log.textContent += `⚠️ Gagal generate untuk '${keyword}' (kosong)\n`;
+      return;
+    }
+
+    const titles = aiText.split("\n").map(t => t.trim()).filter(t => t.length > 0);
+    const blob = new Blob([titles.join("\n")], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `judul_dracin_${keyword.replace(/\s+/g, "_")}.txt`;
+    link.click();
+
+    log.textContent += `✅ ${keyword}: ${titles.length} judul dibuat & disimpan.\n`;
+  } catch (err) {
+    console.error("Error:", err);
+    log.textContent += `💥 Error koneksi untuk '${keyword}' (${err.message})\n`;
+  }
+}
+</script>
+</body>
+</html>
